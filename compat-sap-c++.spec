@@ -12,7 +12,7 @@
 %global gcc_version 4.8.2
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %{release}, append them after %{gcc_release} on Release: line.
-%global gcc_release 18
+%global gcc_release 19
 %global gmp_version 4.3.1
 %global mpfr_version 2.4.1
 %global mpc_version 0.8.1
@@ -47,7 +47,7 @@ Name: %{?scl_prefix}c++
 ExclusiveArch: x86_64 ppc64 s390x
 
 Version: %{gcc_version}
-Release: %{gcc_release}.1%{?dist}
+Release: %{gcc_release}%{?dist}
 # libgcc, libgfortran, libmudflap, libgomp, libstdc++ and crtstuff have
 # GCC Runtime Exception.
 License: GPLv3+ and GPLv3+ with exceptions and GPLv2+ with exceptions and LGPLv2+ and BSD
@@ -701,8 +701,8 @@ rm -rf %{buildroot}
 %{_root_prefix}/%{_lib}/compat-sap-c++.so
 
 %changelog
-* Tue Aug 09 2016 Marek Polacek <polacek@redhat.com> 4.8.2-18.1
-- bump for z-stream rebuild (#1364370)
+* Mon Dec 12 2016 Marek Polacek <polacek@redhat.com> 4.8.2-19
+- bump Release
 
 * Thu Aug 04 2016 Marek Polacek <polacek@redhat.com> 4.8.2-18
 - change the description again (#1351509)
