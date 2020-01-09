@@ -1,0 +1,55 @@
+--- config/tls.m4.jj	2010-09-21 10:36:20.000000000 -0400
++++ config/tls.m4	2010-12-01 15:57:48.656115954 -0500
+@@ -46,7 +46,7 @@ AC_DEFUN([GCC_CHECK_TLS], [
+ 	  AC_RUN_IFELSE(
+ 	    [AC_LANG_PROGRAM(
+ 	       [#include <pthread.h>
+-		__thread int a;
++		__thread int a __attribute__((tls_model ("local-exec")));
+ 		static int *volatile a_in_other_thread;
+ 		static void *
+ 		thread_func (void *arg)
+--- libgomp/configure.jj	2010-12-01 11:52:17.000000000 -0500
++++ libgomp/configure	2010-12-01 15:59:29.960116212 -0500
+@@ -15378,7 +15378,7 @@ else
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ #include <pthread.h>
+-		__thread int a;
++		__thread int a __attribute__((tls_model ("local-exec")));
+ 		static int *volatile a_in_other_thread;
+ 		static void *
+ 		thread_func (void *arg)
+--- libjava/configure.jj	2010-12-01 11:52:17.000000000 -0500
++++ libjava/configure	2010-12-01 15:59:56.927118530 -0500
+@@ -24399,7 +24399,7 @@ else
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ #include <pthread.h>
+-		__thread int a;
++		__thread int a __attribute__((tls_model ("local-exec")));
+ 		static int *volatile a_in_other_thread;
+ 		static void *
+ 		thread_func (void *arg)
+--- libmudflap/configure.jj	2010-09-21 10:35:52.000000000 -0400
++++ libmudflap/configure	2010-12-01 15:58:51.864361690 -0500
+@@ -11478,7 +11478,7 @@ else
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ #include <pthread.h>
+-		__thread int a;
++		__thread int a __attribute__((tls_model ("local-exec")));
+ 		static int *volatile a_in_other_thread;
+ 		static void *
+ 		thread_func (void *arg)
+--- libstdc++-v3/configure.jj	2010-12-01 11:52:17.000000000 -0500
++++ libstdc++-v3/configure	2010-12-01 15:58:25.789123354 -0500
+@@ -25573,7 +25573,7 @@ else
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ #include <pthread.h>
+-		__thread int a;
++		__thread int a __attribute__((tls_model ("local-exec")));
+ 		static int *volatile a_in_other_thread;
+ 		static void *
+ 		thread_func (void *arg)

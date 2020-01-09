@@ -1,0 +1,83 @@
+Change the default to -fgnu89-inline, as RHEL5 headers aren't ready.
+
+--- gcc/c-family/c-opts.c.jj	2008-08-21 04:06:31.000000000 -0400
++++ gcc/c-family/c-opts.c	2008-08-21 04:06:48.000000000 -0400
+@@ -1048,7 +1048,7 @@ c_common_post_options (const char **pfil
+   /* By default we use C99 inline semantics in GNU99 or C99 mode.  C99
+      inline semantics are not supported in GNU89 or C89 mode.  */
+   if (flag_gnu89_inline == -1)
+-    flag_gnu89_inline = !flag_isoc99;
++    flag_gnu89_inline = 1;
+   else if (!flag_gnu89_inline && !flag_isoc99)
+     error ("-fno-gnu89-inline is only supported in GNU99 or C99 mode");
+ 
+--- gcc/testsuite/gcc.dg/inline-32.c.jj	2008-07-08 04:01:25.000000000 -0400
++++ gcc/testsuite/gcc.dg/inline-32.c	2008-08-21 04:05:40.000000000 -0400
+@@ -1,5 +1,5 @@
+ /* { dg-do link } */
+-/* { dg-options "-std=c99 -pedantic-errors" } */
++/* { dg-options "-std=c99 -pedantic-errors -fno-gnu89-inline" } */
+ /* { dg-additional-sources inline-32a.c } */
+ inline int f (void) { return 0; }
+ 
+--- gcc/testsuite/gcc.dg/inline-25.c.jj	2008-04-28 08:22:39.000000000 -0400
++++ gcc/testsuite/gcc.dg/inline-25.c	2008-08-21 04:05:17.000000000 -0400
+@@ -1,6 +1,6 @@
+ /* PR c/35017 */
+ /* { dg-do compile } */
+-/* { dg-options "-std=iso9899:1999 -pedantic-errors" } */
++/* { dg-options "-std=iso9899:1999 -pedantic-errors -fno-gnu89-inline" } */
+ 
+ static int a = 6;
+ static const int b = 6;
+--- gcc/testsuite/gcc.dg/inline-26.c.jj	2008-04-28 08:22:38.000000000 -0400
++++ gcc/testsuite/gcc.dg/inline-26.c	2008-08-21 04:05:28.000000000 -0400
+@@ -1,6 +1,6 @@
+ /* PR c/35017 */
+ /* { dg-do compile } */
+-/* { dg-options "-std=gnu99" } */
++/* { dg-options "-std=gnu99 -fno-gnu89-inline" } */
+ 
+ static int a = 6;
+ static const int b = 6;
+--- gcc/testsuite/gcc.dg/inline-15.c.jj	2008-04-28 08:22:38.000000000 -0400
++++ gcc/testsuite/gcc.dg/inline-15.c	2008-08-21 04:05:04.000000000 -0400
+@@ -1,7 +1,7 @@
+ /* Check that an error message is produced when a C99 inline function
+    is never defined.  */
+ /* { dg-do compile } */
+-/* { dg-options "-std=c99" } */
++/* { dg-options "-std=c99 -fno-gnu89-inline" } */
+ 
+ extern inline int func1 (void); /* { dg-warning "never defined" } */
+ inline int func2 (void); /* { dg-warning "never defined" } */
+--- gcc/testsuite/gcc.dg/inline-14.c.jj	2008-04-28 08:22:39.000000000 -0400
++++ gcc/testsuite/gcc.dg/inline-14.c	2008-08-21 04:04:51.000000000 -0400
+@@ -1,6 +1,6 @@
+ /* Check that you can't redefine a C99 inline function.  */
+ /* { dg-do compile } */
+-/* { dg-options "-std=c99" } */
++/* { dg-options "-std=c99 -fno-gnu89-inline" } */
+ 
+ extern inline int func1 (void) /* { dg-message "note: previous definition" } */
+ {
+--- gcc/testsuite/gcc.dg/inline-13.c.jj	2008-04-28 08:22:39.000000000 -0400
++++ gcc/testsuite/gcc.dg/inline-13.c	2008-08-21 04:04:15.000000000 -0400
+@@ -1,6 +1,6 @@
+ /* Verify basic C99 inline functionality.  */
+ /* { dg-do compile } */
+-/* { dg-options "-std=c99" } */
++/* { dg-options "-std=c99 -fno-gnu89-inline" } */
+ /* { dg-final { scan-assembler-not "dontgenerate" } } */
+ /* { dg-final { scan-assembler "func1" } } */
+ /* { dg-final { scan-assembler "func2" } } */
+--- gcc/testsuite/gcc.target/i386/pr39013-2.c.jj	2009-02-03 14:48:58.000000000 -0500
++++ gcc/testsuite/gcc.target/i386/pr39013-2.c	2009-04-29 02:54:07.000000000 -0400
+@@ -1,6 +1,6 @@
+ /* PR target/39013 */
+ /* { dg-do compile { target *-*-linux* } } */
+-/* { dg-options "-O2 -fpie -std=gnu99" } */
++/* { dg-options "-O2 -fpie -std=gnu99 -fno-gnu89-inline" } */
+ 
+ inline int foo (void);		/* { dg-warning "declared but never defined" } */
+ extern inline int bar (void);	/* { dg-warning "declared but never defined" } */

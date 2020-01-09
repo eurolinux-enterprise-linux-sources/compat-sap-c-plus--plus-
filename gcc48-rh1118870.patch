@@ -1,0 +1,136 @@
+2014-07-16  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/std/condition_variable: Include memory if
+	_GLIBCXX_DTS2_CONDITION_VARIABLE_ANY is defined.
+	(std::condition_variable_any): Move to std::_V2::condition_variable_any
+	if _GLIBCXX_DTS2_CONDITION_VARIABLE_ANY is defined and
+	change type of _M_mutex to shared_ptr<mutex>, adjust all
+	methods.
+	* testsuite/30_threads/condition_variable_any/rh1118870.cc: New test.
+
+--- libstdc++-v3/include/std/condition_variable	2014-07-16 16:59:41.135434957 +0100
++++ libstdc++-v3/include/std/condition_variable	2014-07-16 17:08:08.847217813 +0100
+@@ -37,6 +37,9 @@
+ 
+ #include <chrono>
+ #include <mutex> // unique_lock
++#ifdef _GLIBCXX_DTS2_CONDITION_VARIABLE_ANY
++# include <memory>
++#endif
+ 
+ #if defined(_GLIBCXX_HAS_GTHREADS) && defined(_GLIBCXX_USE_C99_STDINT_TR1)
+ 
+@@ -165,13 +168,21 @@
+       }
+   };
+ 
++#ifdef _GLIBCXX_DTS2_CONDITION_VARIABLE_ANY
++  inline namespace _V2 {
++#endif
++
+   /// condition_variable_any
+   // Like above, but mutex is not required to have try_lock.
+   class condition_variable_any
+   {
+     typedef chrono::system_clock	__clock_t;
+     condition_variable			_M_cond;
++#ifdef _GLIBCXX_DTS2_CONDITION_VARIABLE_ANY
++    shared_ptr<mutex>			_M_mutex;
++#else
+     mutex				_M_mutex;
++#endif
+ 
+     // scoped unlock - unlocks in ctor, re-locks in dtor
+     template<typename _Lock>
+@@ -194,9 +205,13 @@
+       };
+ 
+   public:
+-
++#ifdef _GLIBCXX_DTS2_CONDITION_VARIABLE_ANY
++    condition_variable_any() : _M_mutex(std::make_shared<mutex>()) { }
++    ~condition_variable_any() = default;
++#else
+     condition_variable_any() noexcept;
+     ~condition_variable_any() noexcept;
++#endif
+ 
+     condition_variable_any(const condition_variable_any&) = delete;
+     condition_variable_any& operator=(const condition_variable_any&) = delete;
+@@ -204,14 +219,22 @@
+     void
+     notify_one() noexcept
+     {
++#ifdef _GLIBCXX_DTS2_CONDITION_VARIABLE_ANY
++      lock_guard<mutex> __lock(*_M_mutex);
++#else
+       lock_guard<mutex> __lock(_M_mutex);
++#endif
+       _M_cond.notify_one();
+     }
+ 
+     void
+     notify_all() noexcept
+     {
++#ifdef _GLIBCXX_DTS2_CONDITION_VARIABLE_ANY
++      lock_guard<mutex> __lock(*_M_mutex);
++#else
+       lock_guard<mutex> __lock(_M_mutex);
++#endif
+       _M_cond.notify_all();
+     }
+ 
+@@ -219,7 +242,12 @@
+       void
+       wait(_Lock& __lock)
+       {
++#ifdef _GLIBCXX_DTS2_CONDITION_VARIABLE_ANY
++	shared_ptr<mutex> __mutex = _M_mutex;
++	unique_lock<mutex> __my_lock(*__mutex);
++#else
+ 	unique_lock<mutex> __my_lock(_M_mutex);
++#endif
+ 	_Unlock<_Lock> __unlock(__lock);
+ 	// _M_mutex must be unlocked before re-locking __lock so move
+ 	// ownership of _M_mutex lock to an object with shorter lifetime.
+@@ -241,7 +269,12 @@
+       wait_until(_Lock& __lock,
+ 		 const chrono::time_point<_Clock, _Duration>& __atime)
+       {
++#ifdef _GLIBCXX_DTS2_CONDITION_VARIABLE_ANY
++	shared_ptr<mutex> __mutex = _M_mutex;
++	unique_lock<mutex> __my_lock(*__mutex);
++#else
+ 	unique_lock<mutex> __my_lock(_M_mutex);
++#endif
+ 	_Unlock<_Lock> __unlock(__lock);
+ 	// _M_mutex must be unlocked before re-locking __lock so move
+ 	// ownership of _M_mutex lock to an object with shorter lifetime.
+@@ -275,6 +308,10 @@
+       { return wait_until(__lock, __clock_t::now() + __rtime, std::move(__p)); }
+   };
+ 
++#ifdef _GLIBCXX_DTS2_CONDITION_VARIABLE_ANY
++  } // end inline namespace
++#endif
++
+   // @} group condition_variables
+ _GLIBCXX_END_NAMESPACE_VERSION
+ } // namespace
+--- libstdc++-v3/testsuite/30_threads/condition_variable_any/rh1118870.cc
++++ libstdc++-v3/testsuite/30_threads/condition_variable_any/rh1118870.cc
+@@ -0,0 +1,14 @@
++// { dg-options " -std=gnu++11 -pthread" }
++#define _GLIBCXX_DTS2_CONDITION_VARIABLE_ANY
++#include <condition_variable>
++#include <cstring>
++
++int main()
++{
++  const size_t sz = sizeof(std::condition_variable_any);
++  char garbage[sz];
++  memset(garbage, 0xff, sz);
++  auto cond = new ((void*)garbage) std::condition_variable_any();
++  cond->notify_all();
++  cond->~condition_variable_any();
++}
