@@ -12,7 +12,7 @@
 %global gcc_version 4.8.2
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %{release}, append them after %{gcc_release} on Release: line.
-%global gcc_release 16
+%global gcc_release 18
 %global gmp_version 4.3.1
 %global mpfr_version 2.4.1
 %global mpc_version 0.8.1
@@ -22,17 +22,9 @@
 %global doxygen_version 1.8.0
 %global _unpackaged_files_terminate_build 0
 %global multilib_64_archs sparc64 ppc64 s390x x86_64
-%ifarch %{ix86} x86_64 ia64
-%global build_libquadmath 1
-%else
 %global build_libquadmath 0
-%endif
 %global build_fortran 0
-%ifarch %{ix86} x86_64 %{arm} alpha ppc ppc64
-%global build_libitm 1
-%else
 %global build_libitm 0
-%endif
 %global build_libstdcxx_docs 0
 %ifarch s390x
 %global multilib_32_arch s390
@@ -52,10 +44,10 @@
 %endif
 Summary: GCC version 4.8
 Name: %{?scl_prefix}c++
-ExclusiveArch: x86_64
+ExclusiveArch: x86_64 ppc64 s390x
 
 Version: %{gcc_version}
-Release: %{gcc_release}%{?dist}
+Release: %{gcc_release}.1%{?dist}
 # libgcc, libgfortran, libmudflap, libgomp, libstdc++ and crtstuff have
 # GCC Runtime Exception.
 License: GPLv3+ and GPLv3+ with exceptions and GPLv2+ with exceptions and LGPLv2+ and BSD
@@ -171,9 +163,7 @@ BuildRequires: perl
 %if 0%{?rhel} < 6
 BuildRequires: tetex-dvips tetex-latex
 %else
-# SAP HACK: Removed texlive-utils
 BuildRequires: texlive-dvips, texlive-latex
-# END SAP HACK.
 %endif
 BuildRequires: ghostscript
 %endif
@@ -249,10 +239,14 @@ Patch2001: doxygen-1.7.1-config.patch
 Patch2002: doxygen-1.7.5-timestamp.patch
 Patch2003: doxygen-1.8.0-rh856725.patch
 
-%if 0%{?rhel} >= 6
+%if 0%{?rhel} >= 7
+%global nonsharedver 48
+%else
+%if 0%{?rhel} == 6
 %global nonsharedver 44
 %else
 %global nonsharedver 41
+%endif
 %endif
 
 %if 0%{?scl:1}
@@ -271,7 +265,8 @@ Patch2003: doxygen-1.8.0-rh856725.patch
 %endif
 
 %description
-This carries runtime compatibility libraries needed for SAP HANA.
+This package provides runtime compatibility libraries for use by SAP
+application binaries only.
 
 %prep
 %if 0%{?rhel} >= 7
@@ -335,19 +330,23 @@ cd doxygen-%{doxygen_version}
 cd ..
 %endif
 %endif
+
 sed -i -e 's/4\.8\.3/4.8.2/' gcc/BASE-VER
 echo 'Red Hat %{version}-%{gcc_release}' > gcc/DEV-PHASE
 
-%if 0%{?rhel} >= 6
-# Default to -gdwarf-3 rather than -gdwarf-2
-sed -i '/UInteger Var(dwarf_version)/s/Init(2)/Init(3)/' gcc/common.opt
-sed -i 's/\(may be either 2, 3 or 4; the default version is \)2\./\13./' gcc/doc/invoke.texi
+%if 0%{?rhel} == 6
+# Default to -gdwarf-3 rather than -gdwarf-4
+sed -i '/UInteger Var(dwarf_version)/s/Init(4)/Init(3)/' gcc/common.opt
+sed -i 's/\(may be either 2, 3 or 4; the default version is \)4\./\13./' gcc/doc/invoke.texi
 %endif
-# Default to -fno-debug-types-section -grecord-gcc-switches
-sed -i '/flag_debug_types_section/s/Init(1)/Init(0)/' gcc/common.opt
-sed -i '/dwarf_record_gcc_switches/s/Init(0)/Init(1)/' gcc/common.opt
+%if 0%{?rhel} == 5
+# Default to -gdwarf-2 rather than -gdwarf-4
+sed -i '/UInteger Var(dwarf_version)/s/Init(4)/Init(2)/' gcc/common.opt
+sed -i 's/\(may be either 2, 3 or 4; the default version is \)4\./\12./' gcc/doc/invoke.texi
+%endif
 
 cp -a libstdc++-v3/config/cpu/i{4,3}86/atomicity.h
+cp -a libstdc++-v3/config/cpu/i{4,3}86/opt
 
 ./contrib/gcc_update --touch
 
@@ -371,6 +370,9 @@ fi
 %endif
 
 %build
+
+# Undo the broken autoconf change in recent Fedora versions
+export CONFIG_SITE=NONE
 
 rm -fr obj-%{gcc_target_platform}
 mkdir obj-%{gcc_target_platform}
@@ -399,6 +401,7 @@ export PATH=`cd ..; pwd`/graphviz-install/bin/${PATH:+:${PATH}}
 cd ..
 %endif
 
+%if 0%{?rhel} < 7
 mkdir doxygen-install
 pushd ../doxygen-%{doxygen_version}
 ./configure --prefix `cd ..; pwd`/obj-%{gcc_target_platform}/doxygen-install \
@@ -408,6 +411,7 @@ make %{?_smp_mflags} all
 make install
 popd
 export PATH=`pwd`/doxygen-install/bin/${PATH:+:${PATH}}
+%endif
 %endif
 
 %if 0%{?rhel} < 6
@@ -431,6 +435,7 @@ make install
 cd ..
 %endif
 
+%if 0%{?rhel} < 7
 mkdir mpc mpc-install
 cd mpc
 ../../mpc-%{mpc_version}/configure --disable-shared \
@@ -442,6 +447,7 @@ cd mpc
 make %{?_smp_mflags}
 make install
 cd ..
+%endif
 
 %{?scl:PATH=%{_bindir}${PATH:+:${PATH}}}
 
@@ -580,10 +586,7 @@ CC="$CC" CXX="$CXX" CFLAGS="$OPT_FLAGS" \
 %ifarch ia64
 GCJFLAGS="$OPT_FLAGS" make %{?_smp_mflags} BOOT_CFLAGS="$OPT_FLAGS" bootstrap
 %else
-# SAP HACK: Don't bootstrap.
-# GCJFLAGS="$OPT_FLAGS" make %{?_smp_mflags} BOOT_CFLAGS="$OPT_FLAGS" profiledbootstrap
 GCJFLAGS="$OPT_FLAGS" make %{?_smp_mflags} BOOT_CFLAGS="$OPT_FLAGS"
-# END SAP HACK.
 %endif
 
 # Make generated man pages even if Pod::Man is not new enough
@@ -639,7 +642,7 @@ find rpm.doc -name \*ChangeLog\* | xargs bzip2 -9
 rm -fr %{buildroot}
 mkdir -p %{buildroot}%{_root_prefix}/%{_lib}
 cd obj-%{gcc_target_platform}
-cp ./x86_64-redhat-linux/libstdc++-v3/src/.libs/libstdc++.so.6.0.* %{buildroot}%{_root_prefix}/%{_lib}/compat-sap-c++.so
+cp %{gcc_target_platform}/libstdc++-v3/src/.libs/libstdc++.so.6.0.* %{buildroot}%{_root_prefix}/%{_lib}/compat-sap-c++.so
 
 %check
 cd obj-%{gcc_target_platform}
@@ -698,6 +701,17 @@ rm -rf %{buildroot}
 %{_root_prefix}/%{_lib}/compat-sap-c++.so
 
 %changelog
+* Tue Aug 09 2016 Marek Polacek <polacek@redhat.com> 4.8.2-18.1
+- bump for z-stream rebuild (#1364370)
+
+* Thu Aug 04 2016 Marek Polacek <polacek@redhat.com> 4.8.2-18
+- change the description again (#1351509)
+- enable on ppc64 (#1363840)
+- enable on s390x (#1363842)
+
+* Thu Jul 07 2016 Marek Polacek <polacek@redhat.com> 4.8.2-17
+- change the description (#1351509)
+
 * Wed May 20 2015 Marek Polacek <polacek@redhat.com> 4.8.2-16
 - backport PR59224 fix again
 
